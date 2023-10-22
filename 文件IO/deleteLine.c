@@ -1,3 +1,4 @@
+//实现删除文件的第10行
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -46,10 +47,13 @@ int main(int argc, char* argv[]) {
 	printf("%d\n", pos);
 	
 	//exit(0);	
-	int offset = lseek(fd1, SEEK_SET, pos);
+	int offset = lseek(fd1, pos, SEEK_SET);
 	printf("%d\n", offset);
 	
-	/*while (row <= 10) {
+	while (1) {
+		if (row == 10) {
+			break;
+		}
 		if (read(fd1, str, 1) <= 0) {
 			break;
 			exit(1);
@@ -63,10 +67,11 @@ int main(int argc, char* argv[]) {
 	while (1) {
 		if (read(fd1, str, 1) <= 0) break;
 		write(fd2, str, 1);
-	}*/	
-	//int trunc_num = lseek(fd2, 0, SEEK_CUR);
-	//ftruncate(fd2, trunc_num);
-	//close(fd1);
-	//close(fd2);
-	//exit(0);
+	}	
+	int trunc_num = lseek(fd2, 0, SEEK_CUR);
+	ftruncate(fd2, trunc_num);
+	close(fd1);
+	close(fd2);
+	exit(0);
 }
+
