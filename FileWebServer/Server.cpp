@@ -49,11 +49,12 @@ int Server::GetServerSocket() {
     return _serverSocket;
 }
 
-bool Server::Listen(int queueLength) {
+bool Server::Listen() {
     return listen(_serverSocket, queueLength) == 0;
 }
 
-bool Server::Accept() {
-    //int length = sizeof(clientAddr);
-    //int clientSocket = accept(_serverSocket, (sockaddr*)&clientAddr, (socklen_t*)&length);
+bool Server::Accept(ClientData* clientData) {
+    int length = sizeof(clientData->ClientAddr);
+    clientData->ClientSock = accept(_serverSocket, (sockaddr*)&(clientData->ClientAddr), (socklen_t*)length);
+    return clientData->ClientSock != -1;
 }
