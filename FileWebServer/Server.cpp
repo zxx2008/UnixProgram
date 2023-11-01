@@ -49,7 +49,7 @@ int Server::GetServerSocket() {
     return _serverSocket;
 }
 
-bool Server::Listen() {
+bool Server::Listen(int queueLength) {
     return listen(_serverSocket, queueLength) == 0;
 }
 

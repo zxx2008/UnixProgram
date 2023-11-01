@@ -7,9 +7,10 @@ class Server {
     private:
         uint16_t _serverport;
         int _serverSocket;
+    public:
         struct ClientData {
             public:
-                sockaddr ClientAddr;
+                sockaddr_in ClientAddr;
                 int ClientSock;
         };
     public:
@@ -19,5 +20,5 @@ class Server {
         uint16_t GetServerPort();
         int GetServerSocket();
         bool Listen(int queueLength);
-        bool Accept();
+        bool Accept(ClientData* clientData);
 };
