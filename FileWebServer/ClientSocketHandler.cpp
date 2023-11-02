@@ -2,7 +2,7 @@
 #include <unistd.h>
 
 
-int ClientSocketHandler::ReadSocket() {
+bool ClientSocketHandler::ReadSocket() {
     //读取客户端的请求到buff中
     //PrintLine("recv start");
     _buffLength = recv(_clientSocket, _buff, sizeof(_buff), MSG_NOSIGNAL);
@@ -13,7 +13,7 @@ int ClientSocketHandler::ReadSocket() {
         return true;
 }
 
-int ClientSocketHandler::WriteSocket(char* buff, int length) {
+bool ClientSocketHandler::WriteSocket(const char* buff, int length) {
     int ret = send(_clientSocket, buff, length, MSG_NOSIGNAL);
     if (ret < 0) {
         return false;

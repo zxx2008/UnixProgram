@@ -13,9 +13,8 @@ class ClientSocketHandler {
         int _currentPoint = 0; //当前读到的位置
         int _clientSocket;  //客户端套接字
         
-        int ReadSocket();
+        bool ReadSocket();
 
-        int WriteSocket(char* buff, int length);
     public:
         //构造函数
         ClientSocketHandler(int clientSocket);
@@ -23,6 +22,7 @@ class ClientSocketHandler {
         char GetNextByte();
         //析构函数
         ~ClientSocketHandler();
+        bool WriteSocket(const char* buff, int length);
 };
 
 #endif 

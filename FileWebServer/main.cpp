@@ -3,6 +3,7 @@
 #include "ClientSocketHandler.h"
 #include "ClientRequestAnalyzer.h"
 #include "Defines.cpp"
+#include "Tools.h"
 
 /*int ReadSocket(int clientSock, char *buff, int length) {
     return recv(clientSock, buff, length, MSG_NOSIGNAL);
@@ -23,6 +24,17 @@ void HandleClientRequest(Server::ClientData *clientData) {
     PrintLine("url: [%s]", clientRequestAnalyzer.GetUrl().c_str());
     PrintLine("http version: [%s]", clientRequestAnalyzer.GetHttpVersion().c_str());
     PrintLine("Cache-control: [%s]", clientRequestAnalyzer.GetKeyDataByKey("Cache-Control").c_str());
+
+    //响应头
+    std::string header = "HTTP/1.1 200 OK\r\nServer:Httpd/1.1\r\nContent-type:image/jpeg\r\n\r\n";
+    clientSocketHandler.WriteSocket(header.c_str(), header.length());
+
+    //web服务器根目录
+    std::string rootPath = "/home/zxx/FileWebServer/WebServer/WebRoot";
+    //根目录 + 请求目录
+    std::string path = rootPath + clientRequestAnalyzer.GetUrl();
+    //发送文件
+    Tools::SendFile(path, &clientSocketHandler);
 }
 
  
@@ -50,6 +62,7 @@ int main() {
         unsigned char* ip = (unsigned char*)&(clientData.ClientAddr.sin_addr.s_addr);
         std::cout << "创建客户端套接字成功" << ip[0] << ", " << ip[1] << ", " << ip[2] << ", " << ip[3] << std::endl;
         HandleClientRequest(&clientData);
+        close(clientData.ClientSock);
     }
     return 0;
 }
