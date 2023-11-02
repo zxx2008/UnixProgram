@@ -35,7 +35,7 @@ bool Server::initServer(uint16_t* port) {
             std::cout << "随机端口分配失败" << std::endl;
             return false;
         }
-        _serverport = serverAdder.sin_port;
+        _serverport = ntohs(serverAdder.sin_port);
         *port = _serverport;
     }
     return true;
@@ -55,6 +55,6 @@ bool Server::Listen(int queueLength) {
 
 bool Server::Accept(ClientData* clientData) {
     int length = sizeof(clientData->ClientAddr);
-    clientData->ClientSock = accept(_serverSocket, (sockaddr*)&(clientData->ClientAddr), (socklen_t*)length);
+    clientData->ClientSock = accept(_serverSocket, (sockaddr*)&(clientData->ClientAddr), (socklen_t*)&length);
     return clientData->ClientSock != -1;
 }
