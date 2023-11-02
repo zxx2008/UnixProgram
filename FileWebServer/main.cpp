@@ -1,24 +1,28 @@
 #include "Server.h"
+#include <unistd.h>
+#include "ClientSocketHandler.h"
+#include "ClientRequestAnalyzer.h"
+#include "Defines.cpp"
 
-int ReadSocket(int clientSock, char *buff, int length) {
+/*int ReadSocket(int clientSock, char *buff, int length) {
     return recv(clientSock, buff, length, MSG_NOSIGNAL);
 }
 
 int WriteSocket(int clientSock, char *buff, int length) {
     return send(clientSock, buff, length, MSG_NOSIGNAL);
-}
+}*/
 
+//处理客户端请求函数
 void HandleClientRequest(Server::ClientData *clientData) {
-    char buff[10240];
-    int length = ReadSocket(clientData->ClientSock, buff, 10240);
-    printf("%s\n",buff);
-    char header[] = "HTTP/1.1 200 OK\r\nContent-Length: %zu\r\nContent-type:text/html\r\n\r\n";
-    char htmlText[] = "<html><a>hello world hello world hello world hello world hello world hello world hello world hello world hello world hello world hello world hello world </a></html>";
-    int ret = WriteSocket(clientData->ClientSock, header, sizeof(header));
-    printf("sent %d\n", ret);
-    ret = WriteSocket(clientData->ClientSock, htmlText, sizeof(htmlText));
-    printf("sent %d\n", ret);
-     
+    //读取客户端请求的对象
+    ClientSocketHandler clientSocketHandler(clientData->ClientSock);
+    //用于解析客户端请求的对象
+    ClientRequestAnalyzer clientRequestAnalyzer(&clientSocketHandler);
+
+    PrintLine("head name: [%s]", clientRequestAnalyzer.GetRequestName().c_str());
+    PrintLine("url: [%s]", clientRequestAnalyzer.GetUrl().c_str());
+    PrintLine("http version: [%s]", clientRequestAnalyzer.GetHttpVersion().c_str());
+    PrintLine("Cache-control: [%s]", clientRequestAnalyzer.GetKeyDataByKey("Cache-Control").c_str());
 }
 
  

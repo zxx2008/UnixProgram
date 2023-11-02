@@ -1,3 +1,6 @@
+#ifndef _SERVER_H_
+#define _SERVER_H_
+
 #include <iostream>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -24,3 +27,5 @@ class Server {
         bool Listen(int queueLength);
         bool Accept(ClientData* clientData);
 };
+
+#endif
