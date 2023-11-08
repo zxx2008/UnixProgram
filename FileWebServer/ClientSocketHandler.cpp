@@ -7,7 +7,7 @@ bool ClientSocketHandler::ReadSocket() {
     //PrintLine("recv start");
     _buffLength = recv(_clientSocket, _buff, sizeof(_buff), MSG_NOSIGNAL);
     //PrintLine("recv finish");
-    if (_buffLength < 0) {
+    if (_buffLength <= 0) {
         PrintLine("读取客户端内容失败");
         return false;
     }
@@ -34,7 +34,7 @@ bool ClientSocketHandler::GetNextByte(char* c)  {
     if(_currentPoint == _buffLength) {
         //判断套接字关闭的情况
         if (ReadSocket() == false) {
-            PrintLine("套接字已关闭");
+            //PrintLine("套接字已关闭");
             return false;
         }
          _currentPoint = 0;

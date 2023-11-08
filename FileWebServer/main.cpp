@@ -1,10 +1,6 @@
 #include "Server.h"
 #include <unistd.h>
-#include "ClientSocketHandler.h"
-#include "ClientRequestAnalyzer.h"
-#include "Defines.cpp"
-#include "Tools.h"
-#include "FileHandler.h"
+#include "ClientConnectsHandler.h"
 
 /*int ReadSocket(int clientSock, char *buff, int length) {
     return recv(clientSock, buff, length, MSG_NOSIGNAL);
@@ -26,7 +22,7 @@ void HandleClientRequest(Server::ClientData *clientData)
         ClientRequestAnalyzer clientRequestAnalyzer(&clientSocketHandler);
         //判断套接字关闭的情况
         if (clientRequestAnalyzer.AnalyzeSuccessed() == false) {
-            PrintLine("客户端套接字已关闭");
+            PrintLine("退出客户端请求处理方法");
             return;
         }
         PrintLine("...");
@@ -71,6 +67,8 @@ int main()
         std::cout << "服务端监听失败" << std::endl;
         return 0;
     }
+    ClientConnectsHandler clientConnectsHandler;
+
     while (1)
     {
         Server::ClientData clientData;
@@ -81,7 +79,7 @@ int main()
         }
         unsigned char *ip = (unsigned char *)&(clientData.ClientAddr.sin_addr.s_addr);
         std::cout << "创建客户端套接字成功" << ip[0] << ", " << ip[1] << ", " << ip[2] << ", " << ip[3] << std::endl;
-        HandleClientRequest(&clientData);
+        clientConnectsHandler.AddClientConnect(clientData.ClientSock, clientData.ClientAddr);
         // close(clientData.ClientSock);
     }
     return 0;

@@ -8,13 +8,15 @@ ClientRequestAnalyzer::ClientRequestAnalyzer(ClientSocketHandler* clientSocketHa
         char c;
         //判断套接字关闭的情况
         if (clientSocketHandler->GetNextByte(&c) == false) {
-            PrintLine("套接字关闭");
+            //PrintLine("套接字关闭");
             _analyzeSuccessed = false;
             return;
         }
         printf("%c", c);
         tempStr += c;
+        //判断一行结束 以/r/n结束一行
         if(tempStr.length() >= 2 && tempStr[tempStr.length()-1] == '\n' && tempStr[tempStr.length() - 2] == '\r') {
+            //如果遇到只有/r/n则结束读取循环
             if (tempStr.length() == 2) {
                 break;
             }
