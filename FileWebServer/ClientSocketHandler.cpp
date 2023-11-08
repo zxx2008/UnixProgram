@@ -8,9 +8,10 @@ bool ClientSocketHandler::ReadSocket() {
     _buffLength = recv(_clientSocket, _buff, sizeof(_buff), MSG_NOSIGNAL);
     //PrintLine("recv finish");
     if (_buffLength < 0) {
+        PrintLine("读取客户端内容失败");
         return false;
     }
-        return true;
+    return true;
 }
 
 bool ClientSocketHandler::WriteSocket(const char* buff, int length) {
@@ -28,14 +29,19 @@ ClientSocketHandler::ClientSocketHandler(int clientSocket) {
     _currentPoint = 0;
 }
 
-char ClientSocketHandler::GetNextByte()  {
+bool ClientSocketHandler::GetNextByte(char* c)  {
     //如果当前缓冲区读完，再次ReadSocket()
     if(_currentPoint == _buffLength) {
-        ReadSocket();
+        //判断套接字关闭的情况
+        if (ReadSocket() == false) {
+            PrintLine("套接字已关闭");
+            return false;
+        }
          _currentPoint = 0;
     }
     //返回当前字符，并且currentPoint++
-    return _buff[_currentPoint++];
+     *c = _buff[_currentPoint++];
+    return true;
 }
 
 ClientSocketHandler::~ClientSocketHandler() {

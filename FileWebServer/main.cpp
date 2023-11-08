@@ -22,8 +22,14 @@ void HandleClientRequest(Server::ClientData *clientData)
     // 用于解析客户端请求的对象
     while (1)
     {
+        PrintLine("解析客户端请求");
         ClientRequestAnalyzer clientRequestAnalyzer(&clientSocketHandler);
-
+        //判断套接字关闭的情况
+        if (clientRequestAnalyzer.AnalyzeSuccessed() == false) {
+            PrintLine("客户端套接字已关闭");
+            return;
+        }
+        PrintLine("...");
         PrintLine("head name: [%s]", clientRequestAnalyzer.GetRequestName().c_str());
         PrintLine("url: [%s]", clientRequestAnalyzer.GetUrl().c_str());
         PrintLine("http version: [%s]", clientRequestAnalyzer.GetHttpVersion().c_str());

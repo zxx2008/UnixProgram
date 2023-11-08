@@ -19,7 +19,7 @@ class ClientSocketHandler {
         //构造函数
         ClientSocketHandler(int clientSocket);
         //按字符从buff中读取
-        char GetNextByte();
+        bool GetNextByte(char* c);
         //析构函数
         ~ClientSocketHandler();
         bool WriteSocket(const char* buff, int length);

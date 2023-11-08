@@ -17,6 +17,7 @@ class ClientRequestAnalyzer {
     private:
         std::string _requestName, _url, _httpVersion;
         std::map<std::string, RequestKeyData> _keyDataMap;
+        bool _analyzeSuccessed;
 
     public:
         //构造函数
@@ -39,6 +40,8 @@ class ClientRequestAnalyzer {
 
         //通过Key获取值
         std::string GetKeyDataByKey(std::string key);
+        
+        bool AnalyzeSuccessed();
 
 };
 

@@ -5,7 +5,14 @@ ClientRequestAnalyzer::ClientRequestAnalyzer(ClientSocketHandler* clientSocketHa
     std::vector<std::string> lines;     //将客户端的每一行存在一个字符串中，并将每一个字符串存储到字符串向量中
     std::string tempStr = "";
     while (1) {
-        char c = clientSocketHandler->GetNextByte();
+        char c;
+        //判断套接字关闭的情况
+        if (clientSocketHandler->GetNextByte(&c) == false) {
+            PrintLine("套接字关闭");
+            _analyzeSuccessed = false;
+            return;
+        }
+        printf("%c", c);
         tempStr += c;
         if(tempStr.length() >= 2 && tempStr[tempStr.length()-1] == '\n' && tempStr[tempStr.length() - 2] == '\r') {
             if (tempStr.length() == 2) {
@@ -20,7 +27,7 @@ ClientRequestAnalyzer::ClientRequestAnalyzer(ClientSocketHandler* clientSocketHa
     for (int i = 1; i < lines.size(); ++i) {
         AnalyzeDataLine(lines[i]);
     }
-
+    _analyzeSuccessed = true;
 }
 
 void ClientRequestAnalyzer::AnalyzeFirstLine(std::string line) {
@@ -80,4 +87,8 @@ std::string ClientRequestAnalyzer::GetKeyDataByKey(std::string key) {
         return "";
     }
     return _keyDataMap[key].Data;
+}
+
+bool ClientRequestAnalyzer::AnalyzeSuccessed() {
+    return _analyzeSuccessed;
 }
