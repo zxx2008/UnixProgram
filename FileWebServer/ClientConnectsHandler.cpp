@@ -36,20 +36,49 @@ void* ClientConnectsHandler::Run(void* data) {
 
         // web服务器根目录
         std::string rootPath = "WebRoot";
+        //Url转换
+        std::string localStr = UrlConverter::ConvertFromUrl(clientRequestAnalyzer.GetUrl());
+        //std::string localStr = UrlCon
         // 根目录 + 请求目录
-        std::string path = rootPath + clientRequestAnalyzer.GetUrl();
+        std::string fullPath = rootPath + localStr.c_str();
+        if (FileHandler::IsFileExist(fullPath) == false) {
+            continue;
+        }
 
-        // 初始化FileHandler对象，获取文件大小
-        FileHandler fileHandler(path);
+        if (FileHandler::IsOrdinaryFile(fullPath)) {
+            // 初始化FileHandler对象，获取文件大小
+            FileHandler fileHandler(fullPath);
+            // 响应头
+            std::string header = "HTTP/1.1 200 OK\r\nServer:Httpd/1.1\r\n";
+            header += "Content-Length:" + std::to_string(fileHandler.GetFileSize()) + "\r\n";
+            header += "Content-type:image/jpeg\r\n\r\n";
+            clientSocketHandler.WriteSocket(header.c_str(), header.length());
 
-        // 响应头
-        std::string header = "HTTP/1.1 200 OK\r\nServer:Httpd/1.1\r\n";
-        header += "Content-Length:" + std::to_string(fileHandler.GetFileSize()) + "\r\n";
-        header += "Content-type:image/jpeg\r\n\r\n";
-        clientSocketHandler.WriteSocket(header.c_str(), header.length());
+            // 发送文件
+            Tools::SendFile(fullPath, &clientSocketHandler);
 
-        // 发送文件
-        Tools::SendFile(path, &clientSocketHandler);
+        }
+        else if (FileHandler::IsDirectoryFile(fullPath)) {
+            FileScanner fileScanner(fullPath);
+            std::string htmlCode = "<html lang=\"zh-CN\"><head><meta charset=\"utf-8\"></head>";
+            for (int i = 0; i < fileScanner.GetLength(); ++i) {
+                std::string labelA = "<a href=\"" + UrlConverter::ConvertToUrl(localStr + \
+                 fileScanner.GetFileNamByIndex(i)) + "\">" \
+                + fileScanner.GetFileNamByIndex(i) + "</a>";
+                htmlCode += labelA + "</br>";
+            }
+            htmlCode += "</html>";
+
+            // 响应头
+            std::string header = "HTTP/1.1 200 OK\r\nServer:Httpd/1.1\r\n";
+            header += "Content-Length:" + std::to_string(htmlCode.length()) + "\r\n";
+            header += "Content-type:text/html\r\n\r\n";
+            clientSocketHandler.WriteSocket(header.c_str(), header.length());
+            clientSocketHandler.WriteSocket(htmlCode.c_str(), htmlCode.length());
+        }
+        
+        
+
     }
     delete threadData;
     return NULL;

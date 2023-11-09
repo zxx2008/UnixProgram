@@ -1,7 +1,7 @@
 #include "Server.h"
 #include <unistd.h>
 #include "ClientConnectsHandler.h"
-#include "FileScanner.h"
+//#include "FileScanner.h"
 
 /*int ReadSocket(int clientSock, char *buff, int length) {
     return recv(clientSock, buff, length, MSG_NOSIGNAL);
@@ -29,7 +29,10 @@ int main()
         return 0;
     }
     PrintLine("服务端监听成功");
-    FileScanner fileScanner("/mnt/d/workspace/MyNote/FileWebTest");
+    FileScanner fileScanner("/home/zxx/FileWebServer/WebRoot");
+    for (int i = 0; i < fileScanner.GetLength(); ++i) {
+        PrintLine("scanner file name [%s]", fileScanner.GetFileNamByIndex(i).c_str());
+    }
     ClientConnectsHandler clientConnectsHandler;
 
     while (1)

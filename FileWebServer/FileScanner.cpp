@@ -2,6 +2,12 @@
 #include <string.h>
 #include <algorithm>
 
+bool direntCompare(const dirent obj1, const dirent obj2) {
+    std::string str1(obj1.d_name);
+    std::string str2(obj2.d_name);
+    return str1 < str2;
+}
+
 FileScanner::FileScanner(std::string directoryPath) {
     _rootPath = directoryPath;
     Scan();
@@ -19,19 +25,19 @@ bool FileScanner::Scan() {
     _fileAttrMap.clear();
     _fileAttrs.clear();
     //获取目录中的每一项
-    while (ptr == readdir(dir) != NULL)
+    while ((ptr = readdir(dir)) != NULL)
     {
         if (ptr->d_type != DT_DIR && ptr->d_type != DT_REG) {
             continue;
         }
-        if (strcmp(ptr->d_name, ".") == 0 || strcmp(ptr->d_name, "..")) {
+        if (strcmp(ptr->d_name, ".") == 0 || strcmp(ptr->d_name, "..") == 0) {
             continue;
         }
         _fileAttrs.push_back(*ptr);
         _fileAttrMap.insert(std::pair<std::string, dirent>(ptr->d_name, *ptr));
     }
     SortFileAttr();
-    
+    return true;
 }
 
 void FileScanner::SortFileAttr() {
@@ -46,8 +52,8 @@ void FileScanner::SortFileAttr() {
         }
     }
     //通过键的字典顺序进行排序
-    std::sort(dirs.begin(), dirs.end(), direntCompare);
-    std::sort(files.begin(), files.end(), direntCompare);
+    //std::sort(dirs.begin(), dirs.end(), direntCompare);
+    //std::sort(files.begin(), files.end(), direntCompare);
     //重新存入_fileAttrs
     _fileAttrs.clear();
     _fileAttrs.insert(_fileAttrs.end(), dirs.begin(), dirs.end());
@@ -55,12 +61,6 @@ void FileScanner::SortFileAttr() {
 
 }
 
-//定义排序方式
-bool direntCompare(const dirent obj1, const dirent obj2) {
-    std::string str1(obj1.d_name);
-    std::string str2(obj2.d_name);
-    return str1 < str2;
-}
 
 dirent* FileScanner::GetDirentByIndex(int index) {
     if (index < 0 || index >= _fileAttrs.size()) {
@@ -95,3 +95,6 @@ unsigned char FileScanner::GetFileTypeByName(std::string name) {
     return _fileAttrMap[name.c_str()].d_type;
 }
 
+int FileScanner::GetLength() {
+    return _fileAttrs.size();
+}

@@ -25,6 +25,11 @@ class FileHandler {
     long GetFileSize();
     
     int Read(char* buff, int length);
+
+    static long GetFileSize(std::string path);
+    static bool IsDirectoryFile(std::string path);
+    static bool IsOrdinaryFile(std::string path);
+    static bool IsFileExist(std::string path);
 };
 
 #endif

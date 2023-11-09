@@ -44,5 +44,11 @@ class FileScanner {
     int GetLength();
 };
 
+/// @brief 自定义排序方式
+/// @param obj1 
+/// @param obj2 
+/// @return 
+bool direntCompare(const dirent obj1, const dirent obj2);
+
 #endif
 

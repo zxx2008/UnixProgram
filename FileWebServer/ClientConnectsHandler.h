@@ -7,6 +7,8 @@
 #include "Tools.h"
 #include "FileHandler.h"
 #include <netinet/in.h>
+#include "UrlConverter.cpp"
+#include "FileScanner.h"
 
 class ClientConnectsHandler {
     private:
