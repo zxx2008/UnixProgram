@@ -1,6 +1,7 @@
 #include "Server.h"
 #include <unistd.h>
 #include "ClientConnectsHandler.h"
+#include "FileScanner.h"
 
 /*int ReadSocket(int clientSock, char *buff, int length) {
     return recv(clientSock, buff, length, MSG_NOSIGNAL);
@@ -9,46 +10,6 @@
 int WriteSocket(int clientSock, char *buff, int length) {
     return send(clientSock, buff, length, MSG_NOSIGNAL);
 }*/
-
-// 处理客户端请求函数
-void HandleClientRequest(Server::ClientData *clientData)
-{
-    // 读取客户端请求的对象
-    ClientSocketHandler clientSocketHandler(clientData->ClientSock);
-    // 用于解析客户端请求的对象
-    while (1)
-    {
-        PrintLine("解析客户端请求");
-        ClientRequestAnalyzer clientRequestAnalyzer(&clientSocketHandler);
-        //判断套接字关闭的情况
-        if (clientRequestAnalyzer.AnalyzeSuccessed() == false) {
-            PrintLine("退出客户端请求处理方法");
-            return;
-        }
-        PrintLine("...");
-        PrintLine("head name: [%s]", clientRequestAnalyzer.GetRequestName().c_str());
-        PrintLine("url: [%s]", clientRequestAnalyzer.GetUrl().c_str());
-        PrintLine("http version: [%s]", clientRequestAnalyzer.GetHttpVersion().c_str());
-        PrintLine("Cache-control: [%s]", clientRequestAnalyzer.GetKeyDataByKey("Cache-Control").c_str());
-
-        // web服务器根目录
-        std::string rootPath = "WebRoot";
-        // 根目录 + 请求目录
-        std::string path = rootPath + clientRequestAnalyzer.GetUrl();
-
-        // 初始化FileHandler对象，获取文件大小
-        FileHandler fileHandler(path);
-
-        // 响应头
-        std::string header = "HTTP/1.1 200 OK\r\nServer:Httpd/1.1\r\n";
-        header += "Content-Length:" + std::to_string(fileHandler.GetFileSize()) + "\r\n";
-        header += "Content-type:image/jpeg\r\n\r\n";
-        clientSocketHandler.WriteSocket(header.c_str(), header.length());
-
-        // 发送文件
-        Tools::SendFile(path, &clientSocketHandler);
-    }
-}
 
 int main()
 {
@@ -67,6 +28,8 @@ int main()
         std::cout << "服务端监听失败" << std::endl;
         return 0;
     }
+    PrintLine("服务端监听成功");
+    FileScanner fileScanner("/mnt/d/workspace/MyNote/FileWebTest");
     ClientConnectsHandler clientConnectsHandler;
 
     while (1)

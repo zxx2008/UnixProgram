@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include "Defines.cpp"
 
+//用于获取文件大小，在发送相应头时可以添加Content-Length
 class FileHandler {
     private:
     FILE* _file = NULL;
