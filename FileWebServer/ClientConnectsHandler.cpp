@@ -61,6 +61,19 @@ void* ClientConnectsHandler::Run(void* data) {
         else if (FileHandler::IsDirectoryFile(fullPath)) {
             FileScanner fileScanner(fullPath);
             std::string htmlCode = "<html lang=\"zh-CN\"><head><meta charset=\"utf-8\"></head>";
+
+            PathNodeManager pathNodeManager(localStr);
+
+            htmlCode += "<a href=\"/\">WeRoot</a>";
+            htmlCode += "<label>/</label>";
+            for (int i = 0; i < pathNodeManager.GetLength(); ++i) {
+                htmlCode += "<a href=\"" + pathNodeManager.GetPath_UrlMode(i) + "\">" + pathNodeManager.GetNameByIndex(i) + "</a>";
+                //PrintLine("%s",pathNodeManager.GetPath_UrlMode(i).c_str());
+                //PrintLine("%d", i);
+                htmlCode += "<label>/</label>";
+            }
+            htmlCode += "</br></br></br></br>";
+
             for (int i = 0; i < fileScanner.GetLength(); ++i) {
                 std::string labelA = "<a href=\"" + UrlConverter::ConvertToUrl(localStr + \
                  fileScanner.GetFileNamByIndex(i)) + "\">" \

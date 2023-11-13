@@ -19,8 +19,10 @@ Server.h Tools.h
 	g++ -c main.cpp -o main.o
 Defines.o:Defines.cpp
 	g++ -c Defines.cpp -o Defines.o
-a.out:main.o ClientConnectsHandler.o ClientRequestAnalyzer.o ClientSocketHandler.o FileHandler.o FileScanner.o Server.o Tools.o Defines.o
-	g++ -o a.out main.o ClientConnectsHandler.o ClientRequestAnalyzer.o \
+PathNodeManager.o:PathNodeManager.h PathNodeManager.cpp
+	g++ -c PathNodeManager.cpp -o PathNodeManager.o
+a.out:main.o PathNodeManager.o ClientConnectsHandler.o ClientRequestAnalyzer.o ClientSocketHandler.o FileHandler.o FileScanner.o Server.o Tools.o Defines.o
+	g++ -o a.out main.o PathNodeManager.o ClientConnectsHandler.o ClientRequestAnalyzer.o \
 	ClientSocketHandler.o FileHandler.o FileScanner.o Server.o Tools.o Defines.o -lpthread
 clean:
 	rm -f *.o a.out

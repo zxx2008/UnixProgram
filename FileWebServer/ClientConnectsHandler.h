@@ -9,6 +9,7 @@
 #include <netinet/in.h>
 #include "UrlConverter.cpp"
 #include "FileScanner.h"
+#include "PathNodeManager.h"
 
 class ClientConnectsHandler {
     private:
