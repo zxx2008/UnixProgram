@@ -21,7 +21,7 @@ mysem_t* mysem_init(int initVal) {
     return p;
 }
 
-int mysem_add(struct mysem_t* p, int num) {
+int mysem_add(mysem_t* p, int num) {
     //锁！！！
     struct mysem_st* ptr = p;
     pthread_mutex_lock(&ptr->mutex);
@@ -33,7 +33,7 @@ int mysem_add(struct mysem_t* p, int num) {
     return num;
 }
 
-int mysem_sub(struct mysem_t* p, int num) {
+int mysem_sub(mysem_t* p, int num) {
     struct mysem_st* ptr = p;
     //锁
     pthread_mutex_lock(&ptr->mutex);
@@ -47,9 +47,10 @@ int mysem_sub(struct mysem_t* p, int num) {
     return num;
 }
 
-int mysem_destory(struct mysem_t* p, int num) {
+int mysem_destory(mysem_t* p) {
     struct mysem_st* ptr = p;
     pthread_mutex_destroy(&ptr->mutex);
     pthread_cond_destroy(&ptr->cond);
     free(ptr);
+    return 0;
 }
