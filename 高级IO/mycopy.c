@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <errno.h>
 
 #define TTY1 "/dev/tty11"
 #define TTY2 "/dev/tty12"
@@ -11,7 +12,7 @@
 //状态
 enum {
     STATE_R = 1,    //读
-    STATEE_W,       //写
+    STATE_W,       //写
     STATE_Ex,       //异常
     STATE_T         //终止
 };
@@ -30,11 +31,79 @@ struct fsm_st {
 static void fsm_driver(struct fsm_st* fsm) {
     int ret;
     //switch ()
+    switch (fsm->stat)
+    {
+    case STATE_R:
+        fsm->len = read(fsm->sfd, fsm->buf, BUFSIZE);
+        if (fsm->len == 0) {//读完文件
+            fsm->stat = STATE_T;
+        }
+        else if (fsm->len < 0) {
+            //判断真错还是数据没有准备好
+            if (errno == EAGAIN) {//数据还没准备好
+                fsm->stat = STATE_R;
+            }
+            else {//read错误
+                fsm->errstr = "read()";
+                fsm->stat = STATE_Ex;
+            }
+        }
+        else {//转换为写状态
+            fsm->pos = 0;
+            fsm->stat = STATE_W;
+        }
+        break;
+    
+    case STATE_W:
+        //写
+
+        //ret < 0
+            //假错 EAGIN
+
+            //真错
+
+        //ret >= 0
+            //写完
+
+            //未写完
+
+        break;
+    case STATE_Ex:
+        perror(fsm->errstr);
+        fsm->stat = STATE_T;
+        break;
+    case STATE_T:
+        break;
+    
+    default:
+        abort();
+        break;
+    }
 }
 
 //中继两个文件函数
 static void relay(int fd1, int fd2) {
+    int fd1_save, fd2_save;
+    //保存两个文件的状态选项
+    fd1_save = fcntl(fd1, F_GETFL);
+    fd2_save = fcntl(fd2, F_GETFL);
+    //添加文件状态非阻塞模式
+    fcntl(fd1, F_SETFL, fd1_save | O_NONBLOCK);
+    fcntl(fd2, F_SETFL, fd2_save | O_NONBLOCK);
+    //定义两个有限状态机分别表示从左写到右和从右写到左
+    struct fsm_st fsm12, fsm21;
+    fsm12.stat = STATE_R;
+    fsm12.sfd = fd1;
+    fsm12.dfd = fd2;
+    
+    fsm21.stat = STATE_R;
+    fsm21.sfd = fd2;
+    fsm21.dfd = fd1;
 
+    while (fsm12.stat != STATE_T || fsm21.stat != STATE_T) {
+        fsm_driver(&fsm12);
+        fsm_driver(&fsm21);
+    }
 }
 
 int main () {
