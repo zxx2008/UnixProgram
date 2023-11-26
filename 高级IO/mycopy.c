@@ -56,17 +56,34 @@ static void fsm_driver(struct fsm_st* fsm) {
     
     case STATE_W:
         //写
-
+        ret = write(fsm->dfd, fsm->buf + fsm->pos, fsm->len);
         //ret < 0
+        if (ret < 0){
             //假错 EAGIN
-
+            if (errno == EAGAIN) {
+                fsm->stat = STATE_W;
+            }
             //真错
+            else {
+                fsm->errstr = "write()";
+                fsm->stat = STATE_W;
+            }
+
+        }
 
         //ret >= 0
+        else {
+            fsm->len -= ret;
+            fsm->pos += ret;    
             //写完
-
+            if (fsm->len == 0) {
+                fsm->stat = STATE_R;
+            }
+            else {
+                fsm->stat = STATE_W;
+            }
             //未写完
-
+        }
         break;
     case STATE_Ex:
         perror(fsm->errstr);
@@ -121,7 +138,7 @@ int main () {
 
     write(fd1, "1\n", 1);
     //中继fd1与fd2
-    //relay(fd1, fd2);
+    relay(fd1, fd2);
 
     close(fd1);
     close(fd2);
