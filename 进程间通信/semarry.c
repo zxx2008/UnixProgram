@@ -2,9 +2,9 @@
  * @Author: Zu Xixin 2665954635@qq.com
  * @Date: 2023-12-05 22:03:50
  * @LastEditors: Zu Xixin 2665954635@qq.com
- * @LastEditTime: 2023-12-06 21:25:59
+ * @LastEditTime: 2023-12-06 21:29:34
  * @FilePath: /进程间通信/semarry.c
- * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ * @Description: 使用信号量数组，创建20个进程每个进程的任务是对tmp文件的数值+1,信号量数组保证文件每次只能被一个进程访问
  */
 #include <stdlib.h>
 #include <stdio.h>
