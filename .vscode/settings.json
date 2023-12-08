@@ -46,5 +46,6 @@
         "stdexcept": "cpp",
         "streambuf": "cpp",
         "typeinfo": "cpp"
-    }
+    },
+    "editor.inlineSuggest.showToolbar": "onHover"
 }
