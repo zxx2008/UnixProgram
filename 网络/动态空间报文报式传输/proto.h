@@ -2,7 +2,7 @@
  * @Author: Zu Xixin 2665954635@qq.com
  * @Date: 2023-12-11 19:10:21
  * @LastEditors: Zu Xixin 2665954635@qq.com
- * @LastEditTime: 2023-12-11 20:36:18
+ * @LastEditTime: 2023-12-11 21:42:44
  * @FilePath: /网络/动态空间报文报式传输/proto.h
  * @Description: 报文具有动态空间大小的报式传输
  */

@@ -2,7 +2,7 @@
  * @Author: Zu Xixin 2665954635@qq.com
  * @Date: 2023-12-11 20:05:22
  * @LastEditors: Zu Xixin 2665954635@qq.com
- * @LastEditTime: 2023-12-11 21:29:53
+ * @LastEditTime: 2023-12-12 16:57:33
  * @FilePath: /网络/动态空间报文报式传输/rcver.c
  * @Description: 动态报文的接受方，接受方不知道要接受报文的具体大小，已最大值申请内存
  */
@@ -13,6 +13,7 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <arpa/inet.h>
+#include <unistd.h>
 
 #include "proto.h"
 
@@ -37,7 +38,7 @@ int main() {
     laddr.sin_port = htons(atoi(RCVPORT));
     laddr.sin_family = AF_INET;
     inet_pton(AF_INET, "0.0.0.0", &(laddr.sin_addr.s_addr));
-    if (bind(sk, &laddr, sizeof(laddr)) < 0) {
+    if (bind(sk, (void*)&laddr, sizeof(laddr)) < 0) {
         perror("bind()");
         close(sk);
         exit(1);
@@ -46,16 +47,16 @@ int main() {
     socklen_t raddr_len = sizeof(raddr);
     char ipstr[IPSTRSIZE];
     while (1) {
-        if (recvfrom(sk, &rbuf, sizeof(rbuf), 0, &raddr, &raddr_len) < 0) {
+        if (recvfrom(sk, rbuf, sizeof(*rbuf), 0, (void*)&raddr, &raddr_len) < 0) {
             perror("recvfrom()");
             close(sk);
             exit(1);
         }
-        inet_ntop(AF_INET, raddr.sin_addr.s_addr, ipstr, IPSTRSIZE);
+        inet_ntop(AF_INET, &raddr.sin_addr.s_addr, ipstr, IPSTRSIZE);
         printf("--MESSAGE FROM %s : %d--\n", ipstr, ntohs(raddr.sin_port));
         printf("Name = %s\n", rbuf->name);
-        printf("Math = %d\n", rbuf->math);
-        printf("Chinese = %d\n", rbuf->chinese);
+        printf("Math = %d\n", ntohl(rbuf->math));
+        printf("Chinese = %d\n", ntohl(rbuf->chinese));
     }
     
 
