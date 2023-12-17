@@ -2,7 +2,7 @@
  * @Author: Zu Xixin 2665954635@qq.com
  * @Date: 2023-12-16 16:02:03
  * @LastEditors: Zu Xixin 2665954635@qq.com
- * @LastEditTime: 2023-12-16 16:05:12
+ * @LastEditTime: 2023-12-17 19:13:01
  * @FilePath: /网络/流式套接字/基础版/basic.c
  * @Description: 流式套接字基础版
  * 
@@ -22,4 +22,19 @@
  * 6. 关闭
  */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
+int main(int argc, char** argv) {
+    
+    //套接字
+
+    //对端地址配置
+
+    //connect
+
+    //系统io转标准io
+
+    
+}
