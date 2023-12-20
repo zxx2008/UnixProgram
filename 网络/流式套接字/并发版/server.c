@@ -1,3 +1,11 @@
+/*
+ * @Author: Zu Xixin 2665954635@qq.com
+ * @Date: 2023-12-20 20:24:58
+ * @LastEditors: Zu Xixin 2665954635@qq.com
+ * @LastEditTime: 2023-12-20 20:24:54
+ * @FilePath: /并发版/server.c
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -72,12 +80,24 @@ int main() {
         //创建子进程
         pid = fork();
         //判断fork错误
-        
+        if(pid < 0) {
+            perror("fork()");
+            close(sd);
+            close(newsd);
+            exit(1);
+        }
         //子进程
+        if (pid == 0) {
+            //关闭不需要的套接字
+            close(sd);
+            inet_ntop(AF_INET, &raddr.sin_addr.s_addr, ipstr, IPSTRSIZE);
+            printf("Client: %s : %d\n", ipstr, ntohs(raddr.sin_port));
+            server_job(newsd);
+            close(newsd);
+            //子进程结束
+            exit(0);
+        }
         
-        inet_ntop(AF_INET, &raddr.sin_addr.s_addr, ipstr, IPSTRSIZE);
-        printf("Client: %s : %d\n", ipstr, ntohs(raddr.sin_port));
-        server_job(newsd);
         close(newsd);
     }
 
