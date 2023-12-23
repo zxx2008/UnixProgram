@@ -2,7 +2,7 @@
  * @Author: Zu Xixin 2665954635@qq.com
  * @Date: 2023-12-20 21:50:18
  * @LastEditors: Zu Xixin 2665954635@qq.com
- * @LastEditTime: 2023-12-21 21:48:13
+ * @LastEditTime: 2023-12-22 20:34:27
  * @FilePath: /动态进程池/server.c
  * @Description: 服务端使用动态进程池
  */
@@ -33,19 +33,43 @@
 #define MAXCLIENT 20    //进程资源总量
 #define SIG_NOTIFY SIGUSR2  //自定义的信号
 
+static struct server_st * serverpool;   //server_st数组的首地址
+static int idle_count = 0, busy_count = 0;  //计数器空闲进程数量，非空闲进程数量
+static int sd; //监听套接字
 
 //信号SIG_NOTIFY处理状态
 static void usr2_handler(int s) {
     return;
 }
 
+//创建一个子进程
+static int add_1_server(void) {
+    int slot;
+    pid_t pid;
+    //判断当前进程数
+    if (idle_count + busy_count >= MAXCLIENT) {
+        //空闲和忙碌的进程数大于或等于总资源量就不增加子进程
+        return -1;
+    }
+
+    // 遍历serverpool数组，查找到可用的位置创建子进程
+    
+    // 新增进程状态设置为空闲
+    //创建子进程，子进程负责干活，父进程设置子进程的pid
+}
+
 //进程状态枚举
+enum {
+    STATE_IDLE = 0;
+    STATE_BUSY;
+};
 
 //包含进程信息的结构体
 struct server_st {
     pid_t pid;  //进程pid
     int state;  //进程状态
 };
+
 
 //主进程
 int main() {
@@ -70,7 +94,7 @@ int main() {
     sigprocmask(SIG_BLOCK, &set, &oset);
 
     //为serverpool申请20个空间， 判断是否成功
-    struct server_st * serverpool;
+    //struct server_st * serverpool;
     serverpool = mmap(NULL, sizeof(struct server_st) * MAXCLIENT, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
     if (serverpool == MAP_FAILED) {
         perror("mmap()");
@@ -83,7 +107,7 @@ int main() {
     }
 
     //创建套接字， 设置端口复用
-    int sd = socket(AF_INET, SOCK_STREAM, 0);
+    sd = socket(AF_INET, SOCK_STREAM, 0);
     if (sd < 0) {
         perror("socket()");
         exit(1);
