@@ -20,6 +20,6 @@ struct client_conf_st {
     char* player_cmd;   //播放器命令
 };
 
-
+extern struct client_conf_st client_conf;
 
 #endif
