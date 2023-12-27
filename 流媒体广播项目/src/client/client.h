@@ -9,7 +9,7 @@
 #ifndef _CLIENT_H_
 #define _CLIENT_H_
 
-#define DEFAULT_PLAYERCMD "/usr/bin/mpg123 > /dev/null"
+#define DEFAULT_PLAYERCMD "/usr/bin/mpg123 - > /dev/null"   //'-'表示播放标准输入
 
 /**
  * @description: 客户端配置信息结构体
