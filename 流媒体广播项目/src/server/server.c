@@ -2,7 +2,7 @@
  * @Author: Zu Xixin 2665954635@qq.com
  * @Date: 2023-12-28 12:54:10
  * @LastEditors: Zu Xixin 2665954635@qq.com
- * @LastEditTime: 2023-12-28 21:24:07
+ * @LastEditTime: 2023-12-29 11:45:41
  * @FilePath: /src/server/server.c
  * @Description: 服务器端main文件
  */
@@ -17,9 +17,14 @@
 #include <string.h>
 #include <errno.h>
 #include <signal.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <arpa/inet.h>
+#include <net/if.h>
 
 #include "server_conf.h"
 #include "../include/proto.h"
+#include "medialib.h"
 
 
 /*
@@ -48,7 +53,7 @@ static void daemon_exit(int s) {
     ;
 }
 
-// 守护进程
+// 守护进程, 脱离终端
 static int daemonize(void) {
     pid_t pid;
     pid = fork(); 
@@ -82,6 +87,25 @@ static int daemonize(void) {
 
     return 0;
 }
+
+// 初始化端口
+static void socket_init(void) {
+    int server_sd = socket(AF_INET, SOCK_DGRM, 0);
+    if(server_sd < 0) {
+        syslog(LOG_ERR, "socket():%s", strerror(errno));
+        exit(1);
+    }
+    // 设置端口属性
+    struct ip_mreqn mreq;
+    inet_pton(AF_INET, server_conf.mgroup, &mreq.imr_multiaddr);
+    inet_pton(AF_INET, "0.0.0.0", &mreq.imr_address);
+    mreq.imr_ifindex = if_nametoindex(server_conf.ifname);
+    if(setsockopt(server_sd, IPPROTO_IP, IP_MULTICAST_IF) < 0) {
+        syslog(LOG_ERR, "setsockopt(IP_MULTICAST_IF):%s", strerror(errno));
+        exit(1);
+    }
+}
+
 
 int main(int argc, char** argv) {
     /*
@@ -153,5 +177,12 @@ int main(int argc, char** argv) {
         exit(1);
     }
 
+    // socket初始hua
+    socket_init();
+
+    // 获取频道信息
+    struct mlib_listentry_st *list;
+    int list_size;
+    mlib_getchnlist();
     closelog();
 }
