@@ -25,6 +25,7 @@
 #include "server_conf.h"
 #include "../include/proto.h"
 #include "medialib.h"
+#include "thr_list.h"
 
 
 /*
@@ -183,6 +184,19 @@ int main(int argc, char** argv) {
     // 获取频道信息
     struct mlib_listentry_st *list;
     int list_size;
-    mlib_getchnlist();
-    closelog();
+    int err;
+    err = mlib_getchnlist(&list, &list_size);
+
+    // 创建节目单频道线程
+    thr_list_create(list, list_size);
+
+    // 创建其他频道线程
+    int i;
+    for(i = 0; i < list_size; ++i) {
+        thr_channel_create(list + i);
+        /*if error*/
+    }
+
+    syslog(LOG_DEBUG, "%d channel threads created", i);
+    //closelog();
 }
