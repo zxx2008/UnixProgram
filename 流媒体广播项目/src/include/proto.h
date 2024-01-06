@@ -2,7 +2,7 @@
  * @Author: Zu Xixin 2665954635@qq.com
  * @Date: 2023-12-25 21:52:15
  * @LastEditors: Zu Xixin 2665954635@qq.com
- * @LastEditTime: 2023-12-25 22:28:43
+ * @LastEditTime: 2024-01-06 16:57:39
  * @FilePath: /src/include/proto.h
  * @Description: 定义传输协议
  */
@@ -42,6 +42,7 @@ struct  msg_channel_st
 struct msg_listentry_st
 {
     chnid_t chnid;  //频道号
+    uint16_t len;   //结构体长度
     uint8_t desc[1];    //频道描述
 }__attribute__((packed));
 
