@@ -160,3 +160,12 @@ int mytbf_destroy(mytbf_t *ptr) {
     free(ptr);
     return 0;
 }
+
+int mytbf_checktoken(mytbf_t *ptr) {
+    int token_left = 0;
+    struct mytbf_st *me = ptr;
+    pthread_mutex_lock(&me->mut);
+    token_left = me->token;
+    pthread_mutex_unlock(&me->mut);
+    return token_left;
+}
