@@ -2,7 +2,7 @@
  * @Author: Zu Xixin 2665954635@qq.com
  * @Date: 2023-12-28 12:54:10
  * @LastEditors: Zu Xixin 2665954635@qq.com
- * @LastEditTime: 2024-01-07 22:06:44
+ * @LastEditTime: 2024-01-08 22:05:42
  * @FilePath: /src/server/server.c
  * @Description: 服务器端main文件
  */
@@ -21,11 +21,15 @@
 #include <netinet/ip.h>
 #include <arpa/inet.h>
 #include <net/if.h>
+#include <syslog.h>
+#include <sys/socket.h>
+
+#include <proto.h>
 
 #include "server_conf.h"
-#include "../include/proto.h"
 #include "medialib.h"
 #include "thr_list.h"
+#include "thr_channel.h"
 
 
 /*
@@ -41,6 +45,7 @@
 int server_sd;  //服务端套接字
 
 struct sockaddr_in sndaddr; //对端地址
+static struct mlib_listentry_st *list; //频道信息
 
 struct server_conf_st server_conf = {.rcvport = DEFAULT_RCVPORT, \
 .mgroup = DEFAULT_MGROUP, \
@@ -55,7 +60,12 @@ static void printfHelp(void) {
 
 // 守护进程结束
 static void daemon_exit(int s) {
-    ;
+    thr_list_destory();
+    thr_channel_destroy_all();
+    mlib_freechnlist(list);
+    syslog(LOG_WARNING, "signal-%d caught, exit now", s);
+    closelog();
+    exit(0);
 }
 
 // 守护进程, 脱离终端
@@ -95,7 +105,7 @@ static int daemonize(void) {
 
 // 初始化端口
 static int socket_init(void) {
-    server_sd = socket(AF_INET, SOCK_DGRM, 0);
+    server_sd = socket(AF_INET, SOCK_DGRAM, 0);
     if(server_sd < 0) {
         syslog(LOG_ERR, "socket():%s", strerror(errno));
         exit(1);
@@ -105,7 +115,7 @@ static int socket_init(void) {
     inet_pton(AF_INET, server_conf.mgroup, &mreq.imr_multiaddr);
     inet_pton(AF_INET, "0.0.0.0", &mreq.imr_address);
     mreq.imr_ifindex = if_nametoindex(server_conf.ifname);
-    if(setsockopt(server_sd, IPPROTO_IP, IP_MULTICAST_IF) < 0) {
+    if(setsockopt(server_sd, IPPROTO_IP, IP_MULTICAST_IF, &mreq, sizeof(mreq)) < 0) {
         syslog(LOG_ERR, "setsockopt(IP_MULTICAST_IF):%s", strerror(errno));
         exit(1);
     }
@@ -113,7 +123,7 @@ static int socket_init(void) {
 
     sndaddr.sin_family = AF_INET;
     sndaddr.sin_port = htons(atoi(server_conf.rcvport));
-    inet_pton(AF_INET, server_conf.mgroup, sin_addr.s_addr);
+    inet_pton(AF_INET, server_conf.mgroup, &sndaddr.sin_addr.s_addr);
     return 0;
 }
 
@@ -130,7 +140,7 @@ int main(int argc, char** argv) {
     sigemptyset(&sa.sa_mask);
     sigaddset(&sa.sa_mask, SIGINT);
     sigaddset(&sa.sa_mask, SIGQUIT);
-    sigaddset(&sa.sa_mask, SIG)
+    sigaddset(&sa.sa_mask, SIGTERM);
     sigaction(SIGTERM, &sa, NULL);
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGQUIT, &sa, NULL);
@@ -192,7 +202,7 @@ int main(int argc, char** argv) {
     socket_init();
 
     // 获取频道信息
-    struct mlib_listentry_st *list;
+    
     int list_size;
     int err;
     err = mlib_getchnlist(&list, &list_size);
@@ -203,10 +213,14 @@ int main(int argc, char** argv) {
     // 创建其他频道线程
     int i;
     for(i = 0; i < list_size; ++i) {
-        thr_channel_create(list + i);
-        /*if error*/
+        err = thr_channel_create(list + i);
+        if(err) {
+            fprintf(stderr, "thr_channel_create():%s\n", strerror(err));
+            exit(1);
+        }
     }
 
     syslog(LOG_DEBUG, "%d channel threads created", i);
-    //closelog();
+    while(1)
+        pause();
 }
