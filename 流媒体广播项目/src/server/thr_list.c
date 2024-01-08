@@ -4,12 +4,17 @@
 #include <pthread.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
 
 #include <proto.h>
 
 #include "thr_list.h"
+#include "server_conf.h"
 
-static pthread_t tid_list //节目单频道线程号
+static pthread_t tid_list; //节目单频道线程号
 static int num_list_entry;
 static struct mlib_listentry_st *list_entry; //频道列表
 
@@ -45,7 +50,15 @@ static void *thr_list(void *p) {
     }
 
     while(1) {
-        syslog(LOG_INFO, "thr_list sn")
+        //syslog(LOG_INFO, "thr_list sn")
+        ret = sendto(server_sd, entrylistptr, totalsize, 0, (void *)&sndaddr, sizeof(sndaddr));
+        if(ret < 0) {
+            syslog(LOG_WARNING, "sendto(server_sd, ...: %s)", strerror(errno));
+        }
+        else {
+            syslog(LOG_DEBUG, "sendto(server_sd ...): succeed.");
+        }
+        sleep(1);
     }
 
 }
@@ -54,10 +67,16 @@ int thr_list_create(struct mlib_listentry_st *listptr, int num_ent) {
     list_entry = listptr;
     num_list_entry = num_ent;
     syslog(LOG_DEBUG, "list content: chnid:%d, desc:%s\n", listptr->chnid, listptr->desc);
-    err = pthread_create(&tid_list, NULL, thr_list, NULL);
+    int err = pthread_create(&tid_list, NULL, thr_list, NULL);
     if(err) {
         syslog(LOG_ERR, "pthread_create():%s", strerror(errno));
         return -1;
     }
+    return 0;
+}
+
+int thr_list_destory(void) {
+    pthread_cancel(tid_list);
+    pthread_join(tid_list, NULL);
     return 0;
 }

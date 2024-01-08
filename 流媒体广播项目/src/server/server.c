@@ -2,7 +2,7 @@
  * @Author: Zu Xixin 2665954635@qq.com
  * @Date: 2023-12-28 12:54:10
  * @LastEditors: Zu Xixin 2665954635@qq.com
- * @LastEditTime: 2023-12-29 11:45:41
+ * @LastEditTime: 2024-01-07 22:06:44
  * @FilePath: /src/server/server.c
  * @Description: 服务器端main文件
  */
@@ -38,6 +38,10 @@
 */
 
 // 服务端配置信息
+int server_sd;  //服务端套接字
+
+struct sockaddr_in sndaddr; //对端地址
+
 struct server_conf_st server_conf = {.rcvport = DEFAULT_RCVPORT, \
 .mgroup = DEFAULT_MGROUP, \
 .media_dir = DEFAULT_MEDIADIR, \
@@ -90,8 +94,8 @@ static int daemonize(void) {
 }
 
 // 初始化端口
-static void socket_init(void) {
-    int server_sd = socket(AF_INET, SOCK_DGRM, 0);
+static int socket_init(void) {
+    server_sd = socket(AF_INET, SOCK_DGRM, 0);
     if(server_sd < 0) {
         syslog(LOG_ERR, "socket():%s", strerror(errno));
         exit(1);
@@ -105,6 +109,12 @@ static void socket_init(void) {
         syslog(LOG_ERR, "setsockopt(IP_MULTICAST_IF):%s", strerror(errno));
         exit(1);
     }
+    // bind 可省略
+
+    sndaddr.sin_family = AF_INET;
+    sndaddr.sin_port = htons(atoi(server_conf.rcvport));
+    inet_pton(AF_INET, server_conf.mgroup, sin_addr.s_addr);
+    return 0;
 }
 
 

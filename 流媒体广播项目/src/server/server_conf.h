@@ -2,7 +2,7 @@
  * @Author: Zu Xixin 2665954635@qq.com
  * @Date: 2023-12-28 13:28:21
  * @LastEditors: Zu Xixin 2665954635@qq.com
- * @LastEditTime: 2023-12-28 16:49:55
+ * @LastEditTime: 2024-01-07 21:29:51
  * @FilePath: /src/server/server_conf.h
  * @Description: 服务器端配置信息
  */
@@ -26,5 +26,7 @@ struct server_conf_st {
 };
 
 extern struct server_conf_st server_conf;
+extern int server_sd;
+extern struct sockaddr_in sndaddr; 
 
 #endif
