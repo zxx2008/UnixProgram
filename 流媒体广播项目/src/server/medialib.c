@@ -2,7 +2,7 @@
  * @Author: Zu Xixin 2665954635@qq.com
  * @Date: 2024-01-02 21:23:42
  * @LastEditors: Zu Xixin 2665954635@qq.com
- * @LastEditTime: 2024-01-05 16:59:24
+ * @LastEditTime: 2024-03-04 22:59:47
  * @FilePath: /src/server/medialib.c
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: 媒体库
  */
@@ -50,15 +50,14 @@ static struct channel_context_st* path2entry(const char* path) {
     char pathstr[PATHSIZE];
     char linebuf[LINEBUFSIZE];
     // 可能会越界，这部分处理不好
-    char *context = (char *)malloc(sizeof(char) * LINEBUFSIZE * 5);
-    context[0] = '\0';
+    
     FILE *fp;
     struct channel_context_st *me;
 
     static chnid_t curr_id = MINCHNID;
 
     // 检测目录合法性
-    strcat(pathstr, path);
+    strncpy(pathstr, path, PATHSIZE);
     strcat(pathstr, "/desc.txt");
     fp = fopen(pathstr, "r"); //打开频道描述文件
     syslog(LOG_INFO, "channel dir: %s\n", pathstr);
@@ -69,22 +68,21 @@ static struct channel_context_st* path2entry(const char* path) {
     }
 
     // 读取文件desc.txt内容
-    while (fgets(linebuf, LINEBUFSIZE, fp) != NULL) {
-        strcat(context, linebuf);
+    if (fgets(linebuf, LINEBUFSIZE, fp) == NULL) {
+        syslog(LOG_INFO, "%s is not a channel dir(cant get the desc.txt)", path);
+        fclose(fp);
+        return NULL;
     }
     fclose(fp);
-    
     // 初始化频道结构体
     me = malloc(sizeof(*me));
     if(me == NULL) {
         syslog(LOG_ERR, "malloc(): %s", strerror(errno));
         free(me);
-        free(context);
         return NULL;
     }
 
-    me->desc = strdup(context);  // 初始化频道描述
-    free(context);
+    me->desc = strdup(linebuf);  // 初始化频道描述
     me->tbf = mytbf_init(MP3_BITRATE / 8, MP3_BITRATE / 8 *5); // 初始化流速控制器
     if(me->tbf == NULL) {
         syslog(LOG_ERR, "mytbf_init()");
@@ -170,26 +168,20 @@ int mlib_freechnlist(struct mlib_listentry_st *ptr) {
 
 // 打开下一个mp3文件
 static int open_next(chnid_t chnid) {
-    for(int i = 0; i < channel[chnid].mp3glob.gl_pathc; ++i) {
-        channel[chnid].pos++;   //更新偏移位置
-        if(channel[chnid].pos == channel[chnid].mp3glob.gl_pathc) {
-            printf("没有新文件了 列表循环\n");
-            channel[chnid].pos = 0;
-        }
-        close(channel[chnid].fd);
-        
-        // 打开新mp3文件
-        channel[chnid].fd = open(channel[chnid].mp3glob.gl_pathv[channel[chnid].pos], O_RDONLY);
-
-        if(channel[chnid].fd < 0) {
-            syslog(LOG_WARNING, "open(%s): %s", channel[chnid].mp3glob.gl_pathv[channel[chnid].pos], strerror(errno));
-            exit(1);
-        }
-        else {
-            printf("打开新文件\n");
-            channel[chnid].offset = 0;
-            return 0;
-        }
+    channel[chnid].pos++;
+    if(channel[chnid].pos == channel[chnid].mp3glob.gl_pathc) {
+        channel[chnid].pos = 0;
+        return -1;
+    }
+    close(channel[chnid].fd);
+    channel[chnid].fd = open(channel[chnid].mp3glob.gl_pathv[channel[chnid].pos], O_RDONLY);
+    if (channel[chnid].fd < 0) {
+        syslog(LOG_WARNING, "open(%s):%s",channel[chnid].mp3glob.gl_pathv[channel[chnid].pos], strerror(errno));
+    }
+    else // successed 
+    {
+        channel[chnid].offset = 0;
+        return 0;
     }
 }
 
@@ -211,13 +203,16 @@ ssize_t mlib_readchn(chnid_t chnid, void *buf, size_t size) {
             }
             else {
                 syslog(LOG_WARNING, "media file %s pread(): %s", channel[chnid].mp3glob.gl_pathv[channel[chnid].pos], strerror(errno));
-                open_next(chnid);
+                if (open_next(chnid) < 0) {
+                    syslog(LOG_ERR, "channel %d: there is no more file!", chnid);
+                }
             }
         }
         else if(len == 0) {
             syslog(LOG_DEBUG,"media %s file is over", channel[chnid].mp3glob.gl_pathv[channel[chnid].pos]);
-            open_next(chnid);
-            break;
+            if (open_next(chnid) < 0) {
+                    syslog(LOG_ERR, "channel %d: there is no more file!", chnid);
+                }
         }
         else {  // len > 0
             channel[chnid].offset += len;

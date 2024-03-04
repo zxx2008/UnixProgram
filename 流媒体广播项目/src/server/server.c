@@ -2,7 +2,7 @@
  * @Author: Zu Xixin 2665954635@qq.com
  * @Date: 2023-12-28 12:54:10
  * @LastEditors: Zu Xixin 2665954635@qq.com
- * @LastEditTime: 2024-01-08 22:05:42
+ * @LastEditTime: 2024-03-04 16:06:36
  * @FilePath: /src/server/server.c
  * @Description: 服务器端main文件
  */
@@ -184,7 +184,7 @@ int main(int argc, char** argv) {
     // 守护进程的实现
     
     if(server_conf.runmode == RUN_DAEMON) {
-        if(daemonize() < 0) {
+        if(daemonize() != 0) {
             perror("daemonize()");
             exit(1);
         }
@@ -223,4 +223,6 @@ int main(int argc, char** argv) {
     syslog(LOG_DEBUG, "%d channel threads created", i);
     while(1)
         pause();
+    closelog();
+    exit(0); 
 }
