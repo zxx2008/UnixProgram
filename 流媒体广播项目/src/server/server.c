@@ -2,7 +2,7 @@
  * @Author: Zu Xixin 2665954635@qq.com
  * @Date: 2023-12-28 12:54:10
  * @LastEditors: Zu Xixin 2665954635@qq.com
- * @LastEditTime: 2024-03-04 16:06:36
+ * @LastEditTime: 2024-03-05 12:39:09
  * @FilePath: /src/server/server.c
  * @Description: 服务器端main文件
  */
@@ -62,7 +62,7 @@ static void printfHelp(void) {
 static void daemon_exit(int s) {
     thr_list_destory();
     thr_channel_destroy_all();
-    mlib_freechnlist(list);
+    mlib_freechnlist(list);  
     syslog(LOG_WARNING, "signal-%d caught, exit now", s);
     closelog();
     exit(0);

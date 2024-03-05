@@ -2,7 +2,7 @@
  * @Author: Zu Xixin 2665954635@qq.com
  * @Date: 2024-01-07 22:12:26
  * @LastEditors: Zu Xixin 2665954635@qq.com
- * @LastEditTime: 2024-01-08 21:16:30
+ * @LastEditTime: 2024-03-05 14:58:29
  * @FilePath: /src/server/thr_channel.c
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -47,9 +47,13 @@ static void* thr_channel_snder(void* ptr) {
     sbufp->chnid = ent->chnid;
     while(1) {
         len = mlib_readchn(ent->chnid, sbufp->data, MAX_DATA);
+        // syslog(LOG_DEBUG, "mlib_readchn() len: %ld", len);
         if(sendto(server_sd, sbufp, len + sizeof(chnid_t), 0, (void *)&sndaddr, sizeof(sndaddr)) < 0) {
             syslog(LOG_ERR, "thr_channel(%d): sendto():%s",ent->chnid, strerror(errno));
-            exit(1);
+            // exit(1);
+        }
+        else {
+            syslog(LOG_DEBUG, "thr_channel(%d):sendto() successed", ent->chnid);
         }
         sched_yield();
     }

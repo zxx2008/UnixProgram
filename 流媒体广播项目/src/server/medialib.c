@@ -2,7 +2,7 @@
  * @Author: Zu Xixin 2665954635@qq.com
  * @Date: 2024-01-02 21:23:42
  * @LastEditors: Zu Xixin 2665954635@qq.com
- * @LastEditTime: 2024-03-04 22:59:47
+ * @LastEditTime: 2024-03-05 14:19:43
  * @FilePath: /src/server/medialib.c
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: 媒体库
  */
@@ -27,7 +27,7 @@
 // 路径大小
 #define PATHSIZE 1024
 #define LINEBUFSIZE 1024
-#define MP3_BITRATE 320 * 1024
+#define MP3_BITRATE 64 * 1024
 
 // 频道描述
 struct channel_context_st
@@ -47,7 +47,7 @@ struct channel_context_st channel[MAXCHNID+1];
 // 将某个目录下的所有文件转为一个频道
 static struct channel_context_st* path2entry(const char* path) {
     syslog(LOG_INFO, "current path: %s\n", path);
-    char pathstr[PATHSIZE];
+    char pathstr[PATHSIZE] = {'\0'};
     char linebuf[LINEBUFSIZE];
     // 可能会越界，这部分处理不好
     
@@ -57,7 +57,7 @@ static struct channel_context_st* path2entry(const char* path) {
     static chnid_t curr_id = MINCHNID;
 
     // 检测目录合法性
-    strncpy(pathstr, path, PATHSIZE);
+    strcat(pathstr, path);
     strcat(pathstr, "/desc.txt");
     fp = fopen(pathstr, "r"); //打开频道描述文件
     syslog(LOG_INFO, "channel dir: %s\n", pathstr);
@@ -167,24 +167,36 @@ int mlib_freechnlist(struct mlib_listentry_st *ptr) {
 }
 
 // 打开下一个mp3文件
-static int open_next(chnid_t chnid) {
-    channel[chnid].pos++;
-    if(channel[chnid].pos == channel[chnid].mp3glob.gl_pathc) {
-        channel[chnid].pos = 0;
-        return -1;
-    }
-    close(channel[chnid].fd);
-    channel[chnid].fd = open(channel[chnid].mp3glob.gl_pathv[channel[chnid].pos], O_RDONLY);
-    if (channel[chnid].fd < 0) {
-        syslog(LOG_WARNING, "open(%s):%s",channel[chnid].mp3glob.gl_pathv[channel[chnid].pos], strerror(errno));
-    }
-    else // successed 
+static int open_next(chnid_t chnid)
+{
+    //加入循环是为了防止每一首歌都打开失败，尽量都试着打开一次
+    for(int i = 0 ; i < channel[chnid].mp3glob.gl_pathc;i++)
     {
-        channel[chnid].offset = 0;
-        return 0;
+        channel[chnid].pos++;
+        //can open any file in channel[chnid].mp3glob.gl_pathv
+        //所有的歌曲都没有打开
+        if(channel[chnid].pos == channel[chnid].mp3glob.gl_pathc)
+        {
+            //channel[chnid].pos = 0;//再来一次
+            return -1;
+            break;//最后一首歌已经打开完毕，结束
+        }
+        close(channel[chnid].fd);
+        channel[chnid].fd = open(channel[chnid].mp3glob.gl_pathv[channel[chnid].pos], O_RDONLY);//对应频道的歌名
+        //如果打开还是失败
+        if(channel[chnid].fd < 0)
+        {
+            syslog(LOG_WARNING, "open(%s):%s", channel[chnid].mp3glob.gl_pathv[chnid], strerror(errno));
+        }
+        else//success
+        {
+            channel[chnid].offset = 0;
+            return 0;
+        }
     }
-}
+    syslog(LOG_ERR, "None of mp3 in channel %d id available.", chnid);
 
+}
 ssize_t mlib_readchn(chnid_t chnid, void *buf, size_t size) {
     int tbfsize;
     int len;

@@ -1,264 +1,274 @@
-/*
- * @Author: Zu Xixin 2665954635@qq.com
- * @Date: 2023-12-25 22:30:49
- * @LastEditors: Zu Xixin 2665954635@qq.com
- * @LastEditTime: 2023-12-26 17:45:36
- * @FilePath: /src/client/client.c
- * @Description: 客户端，主进程使用socket接受数据，交给子进程进行解码播放，父子进程通信使用管道进行
- */
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <getopt.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <getopt.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
+//#include <proto.h>  
+#include "../include/proto.h"
 #include <arpa/inet.h>
-#include <net/if.h>
 #include <errno.h>
-
-#include <proto.h>
+#include <error.h>
+#include <string.h>
+#include <net/if.h>
 #include "client.h"
 
 /*
-* -M --mgroup 指定多播组
-* -P --port 指定接收器端口
-* -p --player 指定播放器
-* -H --help   显示帮助
+-M --mgroup specify multicast group
+-P --port specify receive port
+-p --player specify player
+-H --help show help
 */
 
-//默认客户端设置信息
 struct client_conf_st client_conf = {\
- .rcvport = DEFAULT_RCVPORT, \
- .mgroup = DEFAULT_MGROUP, \
- .player_cmd = DEFAULT_PLAYERCMD \
-};
+        .rcvport = DEFAULT_RCVPORT,\
+        .mgroup = DEFAULT_MGROUP,\
+        .player_cmd = DEFAULT_PLAYERCMD,\
+        .mgroup = DEFAULT_MGROUP};
 
-static void printHelp(void) {
-    printf("-P --port    指定接受端口\n-M --mgroup    指定多播组地址\n-p --player    指定播放器命令行\n-H --help    显示帮助");
+static void print_help()
+{
+    printf("-P --port   specify receive port\n");
+    printf("-M --mgroup specify multicast group\n");
+    printf("-p --player specify player \n");
+    printf("-H --help   show help\n");
 }
-
-static ssize_t writen(int fd, const char* buf, size_t len) {
+/*write to fd len bytes data*/
+static int writen(int fd, const void * buf, size_t len)
+{
+    int count = 0;
     int pos = 0;
-    int ret;
-    while(len > 0) {
-        ret = write(fd, buf + pos, len);
-        if (ret < 0) {
-            if(errno == EINTR) continue;
+    while(len > 0)
+    {
+        count = write(fd, buf + pos, len);
+        if(count < 0)
+        {
+            if(errno == EINTR)
+                continue;
             perror("write()");
             return -1;
         }
-
-        len -= ret;
-        pos += ret;
+        len -= count;
+        pos += count;
     }
-    return pos;
+    return 0;
+
 }
+int main(int argc, char * argv[])
+{
 
-int main(int argc, char** argv) {
+    /*
+    initializing
+    level:default < configuration file < 
+          environment < arg
 
-    //分析命令行参数
+    */
     int index = 0;
-    struct option argarr[] = {{"port", 1, NULL, 'P'}, \
-    {"mgroup", 1, NULL, 'M'}, \
-    {"player", 1, NULL, 'p'}, {"help", 0, NULL, 'H'}, \
-    {NULL, 0, NULL, 0}};
-    //man getopt_long 获得详细信息
+    int sd = 0;
+    struct ip_mreqn mreq;//group setting
+    struct sockaddr_in laddr; //local address
+    int val;//set sockopt 
+    int pd[2];
+    pid_t pid;
+    struct sockaddr_in server_addr;
+    socklen_t serveraddr_len;
+    int len;
+    int chosenid;
+    int ret = 0;
+    struct msg_channel_st *msg_channel;
+    struct sockaddr_in raddr;
+    socklen_t raddr_len;
 
+    struct option argarr[] = {{"port", 1, NULL, 'P'}, \
+                              {"mgroup", 1, NULL, 'M'},\
+                              {"help", 0, NULL, 'H'},\
+                              {NULL, 0, NULL, 0}};
     int c;
-    while (1) {
-        c = getopt_long(argc, argv, "P:M:p:H", argarr, &index);
-        if (c < 0) {
+    while(1)
+    {
+        /*long format argument parse*/
+        c = getopt_long(argc, argv, "P:M:p:H",argarr, &index);
+        if(c < 0)
             break;
-        }
-        switch (c)
+        switch(c)
         {
-            case 'P':   //PORT
+            case 'P':
                 client_conf.rcvport = optarg;
                 break;
-            case 'M':   //mgroup
+            case 'M':
                 client_conf.mgroup = optarg;
                 break;
-            case 'p':   //player
+            case 'h':
                 client_conf.player_cmd = optarg;
                 break;
-            case 'H':   //help
-                //printf("");
-                printHelp();
+            case 'H':
+                print_help();
+                /*press q to quit*/
                 exit(0);
                 break;
             default:
-                printf("不合法的参数\n");
                 abort();
                 break;
         }
     }
-    
-    
-    //socket
-    int sd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sd < 0) {
+
+    sd = socket(AF_INET, SOCK_DGRAM, 0);
+    if(sd < 0)
+    {
         perror("socket()");
-        exit(1);
+        exit(0);
     }
-
-    //设置客户端加入多播组 (IP_DROP_MEMBERSHIP 离开多播组)
-    struct ip_mreqn mreq;
-    if(inet_pton(AF_INET, client_conf.mgroup, &mreq.imr_multiaddr) < 0) {
-        perror("inet_pton()");
-        close(sd);
-        exit(1);
-    }
-
-    if(inet_pton(AF_INET, "0.0.0.0", &mreq.imr_address) < 0) {
-        perror("inet_pton()");
-        close(sd);
-        exit(1);
-    }
-    mreq.imr_ifindex = if_nametoindex("eth0");
-    if (setsockopt(sd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0) {
+    //multicast group 
+    inet_pton(AF_INET, client_conf.mgroup, &mreq.imr_multiaddr);//255.255.255.255-->0xFF..
+    //local address(self)
+    inet_pton(AF_INET, "0.0.0.0", &mreq.imr_address);
+    //local net card
+    mreq.imr_ifindex = if_nametoindex("enp0s3");
+    if(setsockopt(sd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0)
+    {
         perror("setsockopt()");
-        close(sd);
         exit(1);
     }
-
-    //设置套接字属性
-    int val = 1;
-    if (setsockopt(sd, IPPROTO_IP, IP_MULTICAST_LOOP, &val, sizeof(val)) < 0) {
+    val = 1;
+    //improve efficiency
+    if(setsockopt(sd, IPPROTO_IP, IP_MULTICAST_LOOP, &(val), sizeof(val)) < 0)
+    {
         perror("setsockopt()");
-        close(sd);
         exit(1);
     }
-
-    struct sockaddr_in laddr;
     laddr.sin_family = AF_INET;
     laddr.sin_port = htons(atoi(client_conf.rcvport));
-    inet_pton(AF_INET, "0.0.0.0", &laddr.sin_addr.s_addr);
-    if (bind(sd, (void *)&laddr, sizeof(laddr)) < 0) {
-        perror("bind()");
-        close(sd);
-        exit(1);
-    }
-
-    //管道用于父子进程通信
-    int pd[2];
-    if (pipe(pd) < 0) {
-        perror("pipe()");
-        close(sd);
-        exit(1);
-    }
-
-    //创建子进程，父进程网络收包，子进程调用解码器
-    pid_t pid;
-    pid = fork();
-    if (pid < 0) {
-        perror("fork()");
-        close(sd);
-        exit(1);
-    }
-
-    if (pid == 0) {
-        // 子进程调用解码器
-        close(sd);  //关闭套接字，子进程不需要
-        close(pd[1]); //关闭管道写端
-        dup2(pd[0], 0); //将管道输入重定向到标准输入
-        if (pd[0] > 0) {
-            close(pd[0]);   
-        }
-        execl("/bin/sh", "sh", "-c", client_conf.player_cmd, NULL);//调用解码器
-        perror("execl()");
-        close(pd[1]);
-        exit(1);
-    }
-
-    // 收节目单
-    struct msg_list_st* msg_list;
-    msg_list = malloc(MSG_LIST_MAX);
-    if(msg_list == NULL) {
-        perror("malloc()");
-        close(sd);
-        close(pd[0]);
-        close(pd[1]);
-        exit(1);
-    }
-
-    ssize_t len;
-    struct sockaddr_in server_addr;
-    socklen_t server_addr_len = sizeof(server_addr);
-    while (1)
+    inet_pton(AF_INET, "0.0.0.0", &laddr.sin_addr);
+    if(bind(sd, (void*)&laddr, sizeof(laddr)) < 0)
     {
-        len = recvfrom(sd, msg_list, MSG_LIST_MAX, 0, (void *)&server_addr, &server_addr_len);
-        if (len < sizeof(struct msg_list_st )) {
-            fprintf(stderr, "message is too small.\n");
-            continue;
-        }
-
-        if (msg_list->chnid != LISTCHNID) {
-            fprintf(stderr, "chnid is not match.\n");
-            continue;
-        }
-
-        break;
-
+        perror("bind()");
+        exit(1);
     }
-    
-    //打印节目单并选择频道
-    struct msg_listentry_st *pos;
-    for (pos = msg_list->entry; (char*)pos < ((char*)msg_list + len); pos = (void*)((char*)pos + ntohs(pos->len))) {
-        printf("%d : %s\n", pos->chnid, pos->desc);
+    if(pipe(pd) < 0 )
+    {
+        perror("pipe()");
+        exit(1);
     }
-    exit(0);
 
-    free(msg_list);
-
-    // 选择频道
-    int chosen_id;
-    int ret;
-    while(1) {
-        ret = scanf("%d", &chosen_id);
-        if (ret != 1) {
+    pid = fork();
+    if(pid < 0)
+    {
+        perror("fork()");
+        exit(1);
+    }
+    if(pid == 0)//child, read, close write
+    {
+        /*decode*/
+        /*mpg123 read from stdin*/
+        close(sd);//socket
+        close(pd[1]);//0:read, 1:write
+        dup2(pd[0], 0);//set pd[0] as stdin
+        if(pd[0] > 0) //close pd[0]
+            close(pd[0]);
+        /*use shell to parse DEFAULT_PLAYERCMD, NULL means to end*/
+        execl("/bin/sh", "sh", "-c", client_conf.player_cmd, NULL);
+        perror("execl()");
+        exit(1);
+    }
+    else//parent
+    {
+        /*receive data from network, write it to pipe*/
+        //receive programme
+        struct msg_list_st *msg_list;
+        msg_list = malloc(MSG_LIST_MAX);
+        if(msg_list == NULL)
+        {
+            perror("malloc");
             exit(1);
         }
-    }
-
-    // 接受频道包
-    struct msg_channel_st * msg_channel;
-    msg_channel = malloc(MSG_CHANNEL_MAX);
-    if(msg_channel == NULL) {
-        perror("malloc()");
-        close(sd);
-        close(pd[0]);
-        close(pd[1]);
-        exit(1); 
-    }
-
-    struct sockaddr_in raddr;
-    socklen_t raddr_len = sizeof(raddr);
-    while(1) {
-        len = recvfrom(sd, msg_channel, MSG_CHANNEL_MAX, 0, (void*)&raddr, &raddr_len);
-        
-        if(raddr.sin_addr.s_addr != server_addr.sin_addr.s_addr || raddr.sin_addr.s_addr != server_addr.sin_addr.s_addr) {
-            fprintf(stderr, "Ignore: address is not match.\n");
-            continue;
+        //必须从节目单开始
+        while(1)
+        {
+            len = recvfrom(sd, msg_list, MSG_LIST_MAX, 0, (void*)&server_addr, &serveraddr_len);
+            fprintf(stderr, "server_addr:%d\n", server_addr.sin_addr.s_addr);
+            if(len < sizeof(struct msg_list_st))
+            {
+                fprintf(stderr, "massage is too short.\n");
+                continue;
+            }
+            if(msg_list->chnid != LISTCHNID)
+            {
+                fprintf(stderr, "current chnid:%d.\n", msg_list->chnid);
+                fprintf(stderr, "chnid is not match.\n");
+                continue;
+            }
+            break;
         }
 
-        if(len < sizeof(struct msg_channel_st)) {
-            fprintf(stderr, "Ignore: message too small.\n");
-            continue;
+        //printf programme, select channel
+        /*
+        1.music xxx
+        2.radio xxx
+        3.....
+        */
+        //receive channel package, send it to child process
+        struct msg_listentry_st *pos;
+        for(pos = msg_list->entry;(char*)pos < ((char *)msg_list + len);pos = (void*)((char *)pos) + ntohs(pos->len))
+        {
+            printf("channel:%d%s", pos->chnid, pos->desc);
         }
-
-        if(msg_channel->chnid == chosen_id) {
-            fprintf(stdout, "accepted msg: %d recieved.\n", msg_channel->chnid);
-            if(writen(pd[1], msg_channel->data, (len - sizeof(chnid_t))) < 0) {
+        /*free list*/
+        free(msg_list);
+        while (ret < 1)
+        {
+            ret = scanf("%d", &chosenid);
+            if(ret != 1)
                 exit(1);
+        } 
+
+        msg_channel = malloc(MSG_CHANNEL_MAX);
+        if(msg_channel == NULL)
+        {
+            perror("malloc");
+            exit(1);
+        }
+        raddr_len = sizeof(raddr);
+        char ipstr_raddr[30];
+        char ipstr_server_addr[30];
+        while(1)
+        {
+            len = recvfrom(sd, msg_channel, MSG_CHANNEL_MAX, 0, (void*)&raddr, &raddr_len);
+            fprintf(stderr, "raddr:%d\n", raddr.sin_addr.s_addr);
+            //防止有人恶意发送不相关的包
+            if(raddr.sin_addr.s_addr != server_addr.sin_addr.s_addr)
+            {
+                inet_ntop(AF_INET, &raddr.sin_addr.s_addr, ipstr_raddr, 30);
+                inet_ntop(AF_INET, &server_addr.sin_addr.s_addr, ipstr_server_addr, 30);
+                fprintf(stderr, "Ignore:addr not match. raddr:%s server_addr:%s.\n", ipstr_raddr, ipstr_server_addr);
+                continue;
+                //exit(1);
+            }
+            if(raddr.sin_port != server_addr.sin_port)
+            {
+                fprintf(stderr, "Ignore:port not match.\n");
+                continue;
+                //exit(1);  
+            }
+            if(len < sizeof(struct msg_channel_st))
+            {
+                fprintf(stderr, "Ignore:massage too short.\n");
+                continue;
+            }
+            //可以做一个缓冲机制，停顿1  2 秒，不采用接收一点播放一点
+            if(msg_channel->chnid == chosenid)
+            {
+                fprintf(stdout, "Accept massage:%d recived.\n", msg_channel->chnid);
+                if( writen(pd[1], msg_channel->data, len - sizeof(chnid_t)) < 0)/*write pipe*/
+                    exit(1);
+                    
             }
         }
+
+        free(msg_channel);
+        close(sd);
+        exit(0);
     }
 
-    free(msg_channel);
-    close(sd);
-
-    exit(0);
-    
 }
